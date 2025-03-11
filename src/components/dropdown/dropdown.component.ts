@@ -1,6 +1,7 @@
 import { animateTo, stopAnimations } from '../../internal/animate.js';
 import { classMap } from 'lit/directives/class-map.js';
 import { getAnimation, setDefaultAnimation } from '../../utilities/animation-registry.js';
+import { getDeepestActiveElement } from '../../internal/active-elements.js';
 import { getTabbableBoundary } from '../../internal/tabbable.js';
 import { html } from 'lit';
 import { ifDefined } from 'lit/directives/if-defined.js';
@@ -34,7 +35,8 @@ import type SlMenu from '../menu/menu.js';
  * @event sl-hide - Emitted when the dropdown closes.
  * @event sl-after-hide - Emitted after the dropdown closes and all animations are complete.
  *
- * @csspart base - The component's base wrapper.
+ * @csspart base - The component's base wrapper, an `<sl-popup>` element.
+ * @csspart base__popup - The popup's exported `popup` part. Use this to target the tooltip's popup container.
  * @csspart trigger - The container that wraps the trigger.
  * @csspart panel - The panel that gets shown when the dropdown is open.
  *
@@ -174,6 +176,20 @@ export default class SlDropdown extends ShoelaceElement {
         return;
       }
 
+      const computeClosestContaining = (element: Element | null | undefined, tagName: string): Element | null => {
+        if (!element) return null;
+
+        const closest = element.closest(tagName);
+        if (closest) return closest;
+
+        const rootNode = element.getRootNode();
+        if (rootNode instanceof ShadowRoot) {
+          return computeClosestContaining(rootNode.host, tagName);
+        }
+
+        return null;
+      };
+
       // Tabbing outside of the containing element closes the panel
       //
       // If the dropdown is used within a shadow DOM, we need to obtain the activeElement within that shadowRoot,
@@ -181,12 +197,13 @@ export default class SlDropdown extends ShoelaceElement {
       setTimeout(() => {
         const activeElement =
           this.containingElement?.getRootNode() instanceof ShadowRoot
-            ? document.activeElement?.shadowRoot?.activeElement
+            ? getDeepestActiveElement()
             : document.activeElement;
 
         if (
           !this.containingElement ||
-          activeElement?.closest(this.containingElement.tagName.toLowerCase()) !== this.containingElement
+          computeClosestContaining(activeElement, this.containingElement.tagName.toLowerCase()) !==
+            this.containingElement
         ) {
           this.hide();
         }
@@ -406,6 +423,7 @@ export default class SlDropdown extends ShoelaceElement {
     return html`
       <sl-popup
         part="base"
+        exportparts="popup:base__popup"
         id="dropdown"
         placement=${this.placement}
         distance=${this.distance}

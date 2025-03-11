@@ -1,4 +1,5 @@
 import { animateTo, stopAnimations } from '../../internal/animate.js';
+import { blurActiveElement } from '../../internal/closeActiveElement.js';
 import { classMap } from 'lit/directives/class-map.js';
 import { getAnimation, setDefaultAnimation } from '../../utilities/animation-registry.js';
 import { HasSlotController } from '../../internal/slot.js';
@@ -131,7 +132,7 @@ export default class SlDrawer extends ShoelaceElement {
   disconnectedCallback() {
     super.disconnectedCallback();
     unlockBodyScrolling(this);
-    this.closeWatcher?.destroy();
+    this.removeOpenListeners();
   }
 
   private requestClose(source: 'close-button' | 'keyboard' | 'overlay') {
@@ -237,6 +238,7 @@ export default class SlDrawer extends ShoelaceElement {
       this.emit('sl-after-show');
     } else {
       // Hide
+      blurActiveElement(this);
       this.emit('sl-hide');
       this.removeOpenListeners();
 
